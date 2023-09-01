@@ -12,12 +12,12 @@ typedef PrinterCallback = List<String> Function(
 
 class _AlwaysFilter extends LogFilter {
   @override
-  bool shouldLog(LogEvent event) => true;
+  FilterResult shouldLog(LogEvent event) => FilterResult.accept;
 }
 
 class _NeverFilter extends LogFilter {
   @override
-  bool shouldLog(LogEvent event) => false;
+  FilterResult shouldLog(LogEvent event) => FilterResult.deny;
 }
 
 class _CallbackPrinter extends LogPrinter {
@@ -44,7 +44,7 @@ class LazyLogger {
     printed = true;
     return [];
   });
-  static final logger = Logger(filter: filter, printer: printer);
+  static final logger = Logger(filters: [filter], printer: printer);
 }
 
 void main() {
@@ -68,12 +68,12 @@ void main() {
   });
 
   test('Logger.log', () {
-    var logger = Logger(filter: _NeverFilter(), printer: callbackPrinter);
+    var logger = Logger(filters: [_NeverFilter()], printer: callbackPrinter);
     logger.log(Level.debug, 'Some message');
 
     expect(printedMessage, null);
 
-    logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    logger = Logger(filters: [_AlwaysFilter()], printer: callbackPrinter);
 
     var levels = [
       Level.trace,
@@ -131,7 +131,7 @@ void main() {
   });
 
   test('Logger.t', () {
-    var logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    var logger = Logger(filters: [_AlwaysFilter()], printer: callbackPrinter);
     var stackTrace = StackTrace.current;
     logger.t('Test', error: 'Error', stackTrace: stackTrace);
     expect(printedLevel, Level.trace);
@@ -141,7 +141,7 @@ void main() {
   });
 
   test('Logger.d', () {
-    var logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    var logger = Logger(filters: [_AlwaysFilter()], printer: callbackPrinter);
     var stackTrace = StackTrace.current;
     logger.d('Test', error: 'Error', stackTrace: stackTrace);
     expect(printedLevel, Level.debug);
@@ -151,7 +151,7 @@ void main() {
   });
 
   test('Logger.i', () {
-    var logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    var logger = Logger(filters: [_AlwaysFilter()], printer: callbackPrinter);
     var stackTrace = StackTrace.current;
     logger.i('Test', error: 'Error', stackTrace: stackTrace);
     expect(printedLevel, Level.info);
@@ -161,7 +161,7 @@ void main() {
   });
 
   test('Logger.w', () {
-    var logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    var logger = Logger(filters: [_AlwaysFilter()], printer: callbackPrinter);
     var stackTrace = StackTrace.current;
     logger.w('Test', error: 'Error', stackTrace: stackTrace);
     expect(printedLevel, Level.warning);
@@ -171,7 +171,7 @@ void main() {
   });
 
   test('Logger.e', () {
-    var logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    var logger = Logger(filters: [_AlwaysFilter()], printer: callbackPrinter);
     var stackTrace = StackTrace.current;
     logger.e('Test', error: 'Error', stackTrace: stackTrace);
     expect(printedLevel, Level.error);
@@ -181,7 +181,7 @@ void main() {
   });
 
   test('Logger.f', () {
-    var logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    var logger = Logger(filters: [_AlwaysFilter()], printer: callbackPrinter);
     var stackTrace = StackTrace.current;
     logger.f('Test', error: 'Error', stackTrace: stackTrace);
     expect(printedLevel, Level.fatal);
@@ -193,7 +193,7 @@ void main() {
   test('setting log level above log level of message', () {
     printedMessage = null;
     var logger = Logger(
-      filter: ProductionFilter(),
+      filters: [ProductionFilter()],
       printer: callbackPrinter,
       level: Level.warning,
     );
@@ -212,7 +212,7 @@ void main() {
     final initLevel = Level.warning;
     // ignore: unused_local_variable
     var logger = Logger(
-      filter: filter,
+      filters: [filter],
       printer: callbackPrinter,
       level: initLevel,
     );

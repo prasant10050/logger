@@ -20,7 +20,8 @@ class Logger {
   static Level level = Level.trace;
 
   /// The current default implementation of log filter.
-  static LogFilter Function() defaultFilter = () => DevelopmentFilter();
+  static List<LogFilter> Function() defaultFilters =
+      () => [DevelopmentFilter()];
 
   /// The current default implementation of log printer.
   static LogPrinter Function() defaultPrinter = () => PrettyPrinter();
@@ -32,27 +33,32 @@ class Logger {
 
   static final Set<OutputCallback> _outputCallbacks = {};
 
-  final LogFilter _filter;
+  final List<LogFilter> _filters;
   final LogPrinter _printer;
   final LogOutput _output;
   bool _active = true;
 
   /// Create a new instance of Logger.
   ///
-  /// You can provide a custom [printer], [filter] and [output]. Otherwise the
+  /// You can provide a custom [printers], [filters] and [outputs]. Otherwise the
   /// defaults: [PrettyPrinter], [DevelopmentFilter] and [ConsoleOutput] will be
   /// used.
   Logger({
-    LogFilter? filter,
+    @Deprecated("Use [filters] instead.") LogFilter? filter,
+    List<LogFilter>? filters,
     LogPrinter? printer,
     LogOutput? output,
     Level? level,
-  })  : _filter = filter ?? defaultFilter(),
+  })  : _filters = filter != null ? [filter] : (filters ?? defaultFilters()),
         _printer = printer ?? defaultPrinter(),
         _output = output ?? defaultOutput() {
-    _filter.init();
-    if (level != null) {
-      _filter.level = level;
+    assert(_filters.isNotEmpty, "Filters cannot be empty");
+
+    for (var e in _filters) {
+      e.init();
+      if (level != null) {
+        e.level = level;
+      }
     }
     _printer.init();
     _output.init();
@@ -173,7 +179,7 @@ class Logger {
       callback(logEvent);
     }
 
-    if (_filter.shouldLog(logEvent)) {
+    if (shouldLog(logEvent)) {
       var output = _printer.log(logEvent);
 
       if (output.isNotEmpty) {
@@ -193,6 +199,17 @@ class Logger {
     }
   }
 
+  bool shouldLog(LogEvent event) {
+    for (var filter in _filters) {
+      var result = filter.shouldLog(event);
+      if (result != FilterResult.neutral) {
+        return result == FilterResult.accept;
+      }
+    }
+    // Fallback in case all filters return neutral.
+    return true;
+  }
+
   bool isClosed() {
     return !_active;
   }
@@ -200,7 +217,7 @@ class Logger {
   /// Closes the logger and releases all resources.
   Future<void> close() async {
     _active = false;
-    await _filter.destroy();
+    await Future.wait(_filters.map((e) => e.destroy()));
     await _printer.destroy();
     await _output.destroy();
   }
