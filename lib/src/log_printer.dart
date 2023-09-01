@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'log_event.dart';
 
 /// An abstract handler of log events.
@@ -12,7 +14,24 @@ abstract class LogPrinter {
 
   /// Is called every time a new [LogEvent] is sent and handles printing or
   /// storing the message.
-  List<String> log(LogEvent event);
+  String log(LogEvent event);
 
   Future<void> destroy() async {}
+
+  String stringifyMessage(dynamic message) {
+    if (message is String) return message;
+
+    final finalMessage = message is Function ? message() : message;
+    if (finalMessage is Map || finalMessage is Iterable) {
+      var encoder = JsonEncoder.withIndent('  ', toEncodable);
+      return encoder.convert(finalMessage);
+    } else {
+      return finalMessage.toString();
+    }
+  }
+
+  /// Handles any object that is causing JsonEncoder() problems.
+  Object? toEncodable(dynamic object) {
+    return object.toString();
+  }
 }

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:math';
 
 import '../ansi_color.dart';
@@ -220,9 +219,7 @@ class PrettyPrinter extends LogPrinter {
   }
 
   @override
-  List<String> log(LogEvent event) {
-    var messageStr = stringifyMessage(event.message);
-
+  String log(LogEvent event) {
     String? stackTraceStr;
     if (event.error != null) {
       if ((errorMethodCount == null || errorMethodCount! > 0)) {
@@ -247,7 +244,7 @@ class PrettyPrinter extends LogPrinter {
 
     return _formatAndPrint(
       event.level,
-      messageStr,
+      event.message,
       timeStr,
       errorStr,
       stackTraceStr,
@@ -352,21 +349,6 @@ class PrettyPrinter extends LogPrinter {
     return '$h:$min:$sec.$ms (+$timeSinceStart)';
   }
 
-  // Handles any object that is causing JsonEncoder() problems
-  Object toEncodableFallback(dynamic object) {
-    return object.toString();
-  }
-
-  String stringifyMessage(dynamic message) {
-    final finalMessage = message is Function ? message() : message;
-    if (finalMessage is Map || finalMessage is Iterable) {
-      var encoder = JsonEncoder.withIndent('  ', toEncodableFallback);
-      return encoder.convert(finalMessage);
-    } else {
-      return finalMessage.toString();
-    }
-  }
-
   AnsiColor _getLevelColor(Level level) {
     AnsiColor? color;
     if (colors) {
@@ -385,7 +367,7 @@ class PrettyPrinter extends LogPrinter {
     return '';
   }
 
-  List<String> _formatAndPrint(
+  String _formatAndPrint(
     Level level,
     String message,
     String? time,
@@ -422,6 +404,6 @@ class PrettyPrinter extends LogPrinter {
     }
     if (_includeBox[level]!) buffer.add(color(_bottomBorder));
 
-    return buffer;
+    return buffer.join("\n");
   }
 }

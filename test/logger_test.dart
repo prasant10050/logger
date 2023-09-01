@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:logger/logger.dart';
 import 'package:test/test.dart';
 
-typedef PrinterCallback = List<String> Function(
+typedef PrinterCallback = String Function(
   Level level,
   dynamic message,
   Object? error,
@@ -26,7 +26,7 @@ class _CallbackPrinter extends LogPrinter {
   _CallbackPrinter(this.callback);
 
   @override
-  List<String> log(LogEvent event) {
+  String log(LogEvent event) {
     return callback(
       event.level,
       event.message,
@@ -42,9 +42,9 @@ class LazyLogger {
   static final filter = ProductionFilter();
   static final printer = _CallbackPrinter((l, m, e, s) {
     printed = true;
-    return [];
+    return m;
   });
-  static final logger = Logger(filter: filter, printer: printer);
+  static final logger = Logger(filter: filter, printers: [printer]);
 }
 
 void main() {
@@ -57,7 +57,7 @@ void main() {
     printedMessage = m;
     printedError = e;
     printedStackTrace = s;
-    return [];
+    return "";
   });
 
   setUp(() {
@@ -68,12 +68,12 @@ void main() {
   });
 
   test('Logger.log', () {
-    var logger = Logger(filter: _NeverFilter(), printer: callbackPrinter);
+    var logger = Logger(filter: _NeverFilter(), printers: [callbackPrinter]);
     logger.log(Level.debug, 'Some message');
 
     expect(printedMessage, null);
 
-    logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    logger = Logger(filter: _AlwaysFilter(), printers: [callbackPrinter]);
 
     var levels = [
       Level.trace,
@@ -113,9 +113,20 @@ void main() {
     expect(() => logger.log(Level.all, 'Test'), throwsArgumentError);
   });
 
+  test('Logger printer parameter', () {
+    // ignore: deprecated_member_use_from_same_package
+    var logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    var stackTrace = StackTrace.current;
+    logger.t('Test', error: 'Error', stackTrace: stackTrace);
+    expect(printedLevel, Level.trace);
+    expect(printedMessage, 'Test');
+    expect(printedError, 'Error');
+    expect(printedStackTrace, stackTrace);
+  });
+
   test('Multiple Loggers', () {
-    var logger = Logger(level: Level.info, printer: callbackPrinter);
-    var secondLogger = Logger(level: Level.debug, printer: callbackPrinter);
+    var logger = Logger(level: Level.info, printers: [callbackPrinter]);
+    var secondLogger = Logger(level: Level.debug, printers: [callbackPrinter]);
 
     logger.log(Level.debug, 'Test');
     expect(printedLevel, null);
@@ -131,7 +142,7 @@ void main() {
   });
 
   test('Logger.t', () {
-    var logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    var logger = Logger(filter: _AlwaysFilter(), printers: [callbackPrinter]);
     var stackTrace = StackTrace.current;
     logger.t('Test', error: 'Error', stackTrace: stackTrace);
     expect(printedLevel, Level.trace);
@@ -141,7 +152,7 @@ void main() {
   });
 
   test('Logger.d', () {
-    var logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    var logger = Logger(filter: _AlwaysFilter(), printers: [callbackPrinter]);
     var stackTrace = StackTrace.current;
     logger.d('Test', error: 'Error', stackTrace: stackTrace);
     expect(printedLevel, Level.debug);
@@ -151,7 +162,7 @@ void main() {
   });
 
   test('Logger.i', () {
-    var logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    var logger = Logger(filter: _AlwaysFilter(), printers: [callbackPrinter]);
     var stackTrace = StackTrace.current;
     logger.i('Test', error: 'Error', stackTrace: stackTrace);
     expect(printedLevel, Level.info);
@@ -161,7 +172,7 @@ void main() {
   });
 
   test('Logger.w', () {
-    var logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    var logger = Logger(filter: _AlwaysFilter(), printers: [callbackPrinter]);
     var stackTrace = StackTrace.current;
     logger.w('Test', error: 'Error', stackTrace: stackTrace);
     expect(printedLevel, Level.warning);
@@ -171,7 +182,7 @@ void main() {
   });
 
   test('Logger.e', () {
-    var logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    var logger = Logger(filter: _AlwaysFilter(), printers: [callbackPrinter]);
     var stackTrace = StackTrace.current;
     logger.e('Test', error: 'Error', stackTrace: stackTrace);
     expect(printedLevel, Level.error);
@@ -181,7 +192,7 @@ void main() {
   });
 
   test('Logger.f', () {
-    var logger = Logger(filter: _AlwaysFilter(), printer: callbackPrinter);
+    var logger = Logger(filter: _AlwaysFilter(), printers: [callbackPrinter]);
     var stackTrace = StackTrace.current;
     logger.f('Test', error: 'Error', stackTrace: stackTrace);
     expect(printedLevel, Level.fatal);
@@ -194,7 +205,7 @@ void main() {
     printedMessage = null;
     var logger = Logger(
       filter: ProductionFilter(),
-      printer: callbackPrinter,
+      printers: [callbackPrinter],
       level: Level.warning,
     );
 
@@ -213,7 +224,7 @@ void main() {
     // ignore: unused_local_variable
     var logger = Logger(
       filter: filter,
-      printer: callbackPrinter,
+      printers: [callbackPrinter],
       level: initLevel,
     );
     expect(filter.level, initLevel);
@@ -234,5 +245,79 @@ void main() {
     LazyLogger.filter.level = Level.warning;
     LazyLogger.logger.i("This is an info message and should not show");
     expect(LazyLogger.printed, isNull);
+  });
+
+  test('Multi Printer', () {
+    var logger = Logger(
+      filter: _AlwaysFilter(),
+      printers: [
+        PrefixPrinter(globalPrefix: "GLOBAL"),
+        PrettyPrinter(),
+        callbackPrinter,
+      ],
+    );
+    var stackTrace = StackTrace.current;
+    logger.f('Test', error: 'Error', stackTrace: stackTrace);
+    expect(printedLevel, Level.fatal);
+    expect(printedMessage, contains('GLOBAL Test'));
+    expect(printedError, 'Error');
+    expect(printedStackTrace, stackTrace);
+  });
+
+  test('Multi Printer', () {
+    var logger = Logger(
+      filter: _AlwaysFilter(),
+      printers: [
+        PrefixPrinter(globalPrefix: "GLOBAL"),
+        PrettyPrinter(),
+        callbackPrinter,
+      ],
+    );
+    var stackTrace = StackTrace.current;
+    logger.f('Test', error: 'Error', stackTrace: stackTrace);
+    expect(printedLevel, Level.fatal);
+    expect(printedMessage, contains('GLOBAL Test'));
+    expect(printedError, 'Error');
+    expect(printedStackTrace, stackTrace);
+  });
+
+  test('Multi Outputs', () {
+    final output1 = MemoryOutput(bufferSize: 2);
+    final output2 = MemoryOutput(bufferSize: 2);
+
+    var logger = Logger(
+      filter: _AlwaysFilter(),
+      printers: [SimplePrinter()],
+      outputs: [
+        output1,
+        output2,
+      ],
+    );
+
+    final String firstLog = "Test0";
+    logger.log(Level.info, firstLog);
+
+    expect(output1.buffer.length, 1);
+    expect(output2.buffer.length, 1);
+    expect(output1.buffer.elementAt(0), equals(output2.buffer.elementAt(0)));
+    expect(output1.buffer.elementAt(0).output, contains(firstLog));
+
+    final String secondLog = "Test1";
+    logger.log(Level.info, secondLog);
+
+    expect(output1.buffer.length, 2);
+    expect(output2.buffer.length, 2);
+    expect(output1.buffer.elementAt(0), equals(output2.buffer.elementAt(0)));
+    expect(output1.buffer.elementAt(0).output, contains(firstLog));
+    expect(output1.buffer.elementAt(1), equals(output2.buffer.elementAt(1)));
+    expect(output1.buffer.elementAt(1).output, contains(secondLog));
+  });
+
+  test('Empty Printers is not allowed', () {
+    expect(() => Logger(printers: []), throwsA(isA<AssertionError>()));
+  });
+
+  test('Empty Outputs is not allowed', () {
+    expect(() => Logger(outputs: []), throwsA(isA<AssertionError>()));
   });
 }

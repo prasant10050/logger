@@ -7,7 +7,7 @@ class TestLogPrinter extends LogPrinter {
   LogEvent? latestEvent;
 
   @override
-  List<String> log(LogEvent event) {
+  String log(LogEvent event) {
     latestEvent = event;
     return realPrinter.log(event);
   }

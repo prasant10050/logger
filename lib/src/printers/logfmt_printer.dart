@@ -17,7 +17,7 @@ class LogfmtPrinter extends LogPrinter {
   };
 
   @override
-  List<String> log(LogEvent event) {
+  String log(LogEvent event) {
     var output = StringBuffer('level=${levelPrefixes[event.level]}');
     if (event.message is String) {
       output.write(' msg="${event.message}"');
@@ -34,6 +34,6 @@ class LogfmtPrinter extends LogPrinter {
       output.write(' error="${event.error}"');
     }
 
-    return [output.toString()];
+    return output.toString();
   }
 }

@@ -34,11 +34,10 @@ class SimplePrinter extends LogPrinter {
   SimplePrinter({this.printTime = false, this.colors = true});
 
   @override
-  List<String> log(LogEvent event) {
-    var messageStr = _stringifyMessage(event.message);
+  String log(LogEvent event) {
     var errorStr = event.error != null ? '  ERROR: ${event.error}' : '';
     var timeStr = printTime ? 'TIME: ${event.time.toIso8601String()}' : '';
-    return ['${_labelFor(event.level)} $timeStr $messageStr$errorStr'];
+    return '${_labelFor(event.level)} $timeStr ${event.message}$errorStr';
   }
 
   String _labelFor(Level level) {
@@ -48,7 +47,8 @@ class SimplePrinter extends LogPrinter {
     return colors ? color(prefix) : prefix;
   }
 
-  String _stringifyMessage(dynamic message) {
+  @override
+  String stringifyMessage(dynamic message) {
     final finalMessage = message is Function ? message() : message;
     if (finalMessage is Map || finalMessage is Iterable) {
       var encoder = const JsonEncoder.withIndent(null);
